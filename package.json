@@ -1,12 +1,12 @@
 {
-  "name": "socket",
+  "name": "socket-mediator",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "node server | browser-sync start --server --files index.html"
   },
-  "author": "",
+  "author": "Glenn Wedin",
   "license": "MIT",
   "dependencies": {
     "express": "^4.13.4",
