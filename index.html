@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<style>
+		*{
+			box-sizing: border-box;
+		}
+		.m{
+			float: left;
+			width: 400px;
+			height: 500px;
+			overflow: auto;
+		}
+
+		input[type="text"], textarea{
+			border: none;
+			border-radius: 5px;
+			background-color: #333;
+			color: #fff;
+			width: 300px;
+			padding: 1em;
+			font-size: 1em;
+			font-family: sans-serif;
+		}
+
+		input[type="submit"] {
+			background-color: #333;
+			padding: 0.5em 1em;
+			border: 1px solid #222;
+			color: #fff;
+			border-radius: 5px;
+			cursor: pointer;
+		}
+
+	</style>
+	<script src="http://localhost:4000/socket.io/socket.io.js"></script>
+
+	<script>
+		var socket = io('http://localhost:4000');
+		var regid = null;
+
+		var Notifications = (function () {
+			var constructor = function (socket) {
+				this.listeners = [];
+				this.s = socket;
+
+				//Setter opp listener
+				var th = this,
+				notification;
+				this.s.on('notification', function (data) {
+
+					var len = th.listeners.length;
+
+					while(len--) {
+						th.listeners[len](data);
+					}
+
+					if(window.Notification) {
+						if(Notification.permission === "granted") {
+							var notification = new Notification(data.title, {
+								body: data.notification
+							});
+						} else if (Notification.permission !== 'denied' || Notification.permission === 'default') {
+						    Notification.requestPermission(function (permission) {
+							    if (permission === "granted") {
+							    	var notification = new Notification(data.title, {
+										body: data.notification
+									});
+							    }
+						 	});
+						}
+					}
+		    	});
+			};
+
+			constructor.prototype = {
+				listen: function (obj) {
+					this.listeners.push(obj);
+					return true;
+				},
+				
+				empty: function () {
+					this.listeners = [];
+					return true;
+				},
+
+				create: function (obj) {
+					var data = { //Some defaults
+						'title': 'Notification',
+						'notification': 'Hello World'
+					};
+					//$.extend(data, obj);
+					Object.assign(data, obj);
+
+					this.s.emit('notify', data);
+					return true;
+				}
+			}
+			return constructor;
+		}());
+
+		//Handlerfactory
+		var handler = function (el, type) {
+			return function (data) {
+				if(type != data.type) {return false}
+				var div = document.createElement('div');
+				div.innerHTML = '<strong>'+data.title+'</strong><br><p>'+data.notification+'</p>';
+				el.appendChild(div);
+			}
+		}
+
+		window.onload = function () {
+			var m1 = document.getElementById('messages'),
+				m2 = document.getElementById('messages2'),
+				form = document.getElementById('form');
+
+			var notify = new Notifications(socket);
+
+			//Type 0 or 1 is used by the returned handler function to decide what type of message is to be shown
+			notify.listen(handler(m1, 0));
+			notify.listen(handler(m2, 1));
+
+			form.addEventListener('submit', function (e) {
+				e.preventDefault();
+				notify.create({
+					title: form.querySelector('input[name="title"]').value,
+					notification: form.querySelector('textarea[name="notification"]').value
+				});
+			});
+		}
+
+	</script>
+</head>
+<body>
+	<div>
+		<form id="form">
+			<div>
+				<input type="text" name="title" placeholder="Title" />
+			</div>
+			<div>
+				<textarea name="notification" placeholder="Notification"></textarea>
+			</div>
+			<div>
+				<input type="submit" name="">
+			</div>
+		</form>
+	</div>
+	<div class="m" id="messages">
+		<h1>Messages 1</h1>
+	</div>
+	<div class="m" id="messages2">
+		<h1>Messages 2</h1>
+	</div>
+</body>
+</html>
